@@ -14,7 +14,7 @@ const LoveLetter: React.FC = () => {
     },
     {
       title: "You Are My Everything",
-      content: "You remind me of that song — not just in melody but in meaning. You make life feel like a slow dance in the dark, like moonlight through sheer curtains, like a guitar riff that settles into your soul. You're not just someone I adore — you're someone I *feel*."
+      content: "I don’t know how else to say this, but you’ve taken up so much space in my heart, and somehow, it feels like it was always meant to be yours. From the way you speak, to the warmth you carry, to the way you listen to music like it’s stitched into your soul you feel like home in a world I’ve always felt misplaced in."
     },
     {
       title: "My Heart's Symphony",
@@ -78,7 +78,7 @@ const LoveLetter: React.FC = () => {
             <Sparkles className="text-accent ml-2" size={20} />
           </div>
           <p className="text-lg font-bold animate-heartbeat" style={{ color: themeConfig.primary }}>
-            MWAHHHHHH! 💕
+            Lots of love, huggies and kissies! MWAH! 💕
           </p>
         </div>
       </div>
