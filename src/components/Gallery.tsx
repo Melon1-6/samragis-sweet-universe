@@ -10,13 +10,13 @@ const Gallery: React.FC = () => {
     {
       src: '/lovable-uploads/f03e2e2a-e31e-41cc-9a24-2c573bd31554.png',
       message: "Your beauty radiates from within, lighting up every moment we share. That sweet smile of yours makes my heart skip beats I didn't know existed. 💕",
-      lyric: "You're so handsome when you're unconscious\nWishing to be the friction in your jeans",
+      lyric: "I'm giving you all my, giving you all my , giving you all my love",
       song: "Heavenly - Cigarettes After Sex"
     },
     {
       src: '/lovable-uploads/ee8d7e21-7b0b-4e6d-8a25-beff07976df2.png',
       message: "Even in the simplest moments, you're absolutely stunning. The way you hold that drink, the way you smile - everything about you is pure magic. ✨",
-      lyric: "And I don't want the world to see me\n'Cause I don't think that they'd understand",
+      lyric: "You're the closest to heaven that I'll ever be and I don't want to go home right now",
       song: "Iris - Goo Goo Dolls"
     },
     {
