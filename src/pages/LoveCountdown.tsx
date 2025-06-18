@@ -111,7 +111,7 @@ const LoveCountdown: React.FC = () => {
                   countdown.isSpecial ? 'ring-2' : ''
                 }`}
                 style={{
-                  ringColor: countdown.isSpecial ? countdown.color : 'transparent'
+                  borderColor: countdown.isSpecial ? countdown.color : 'transparent'
                 }}
               >
                 <div className="text-center mb-6">
