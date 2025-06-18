@@ -1,10 +1,14 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useTheme } from '../contexts/ThemeContext';
 import { Heart, Star, Sparkles, Play, RotateCcw } from 'lucide-react';
 
 const MiniGame: React.FC = () => {
-  const { themeConfig } = useTheme();
-  const [currentGame, setCurrentGame] = useState<'hearts' | 'flappy'>('hearts');
+  // Default theme config
+  const themeConfig = {
+    primary: '#e91e63',
+    secondary: '#9c27b0',
+    accent: '#ff9800'
+  };
+  const [currentGame, setCurrentGame] = useState<'hearts' | 'pacman'>('hearts');
   
   // Hearts Game State
   const [score, setScore] = useState(0);
@@ -13,13 +17,40 @@ const MiniGame: React.FC = () => {
   const [hearts, setHearts] = useState<Array<{ id: number; x: number; y: number; collected: boolean }>>([]);
   const [gameMessage, setGameMessage] = useState("Click hearts to collect love points! 💕");
 
-  // Harry Potter Broomstick Game State
-  const [flappyScore, setFlappyScore] = useState(0);
-  const [flappyGameActive, setFlappyGameActive] = useState(false);
-  const [playerY, setPlayerY] = useState(50);
-  const [velocity, setVelocity] = useState(0);
-  const [obstacles, setObstacles] = useState<Array<{ id: number; x: number; gap: number; passed: boolean }>>([]);
+  // Pac-Man Game State
+  const [pacmanScore, setPacmanScore] = useState(0);
+  const [pacmanGameActive, setPacmanGameActive] = useState(false);
+  const [playerPos, setPlayerPos] = useState({ x: 7, y: 7 });
+  const [dementors, setDementors] = useState([
+    { x: 1, y: 1, direction: 1 },
+    { x: 13, y: 1, direction: 2 },
+    { x: 1, y: 13, direction: 3 },
+    { x: 13, y: 13, direction: 4 }
+  ]);
+  const [snitches, setSnitches] = useState<Set<string>>(new Set());
+  const [powerUps, setPowerUps] = useState<Set<string>>(new Set());
+  const [isPoweredUp, setIsPoweredUp] = useState(false);
+  const [vulnerableDementors, setVulnerableDementors] = useState<Set<number>>(new Set());
   const gameLoopRef = useRef<number>();
+
+  // Maze layout (15x15 grid, 1 = wall, 0 = path)
+  const maze = [
+    [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+    [1,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+    [1,0,1,1,0,1,1,1,1,1,0,1,1,0,1],
+    [1,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+    [1,0,1,0,1,1,0,1,0,1,1,0,1,0,1],
+    [1,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+    [1,1,1,0,1,0,1,1,1,0,1,0,1,1,1],
+    [1,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+    [1,1,1,0,1,0,1,1,1,0,1,0,1,1,1],
+    [1,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+    [1,0,1,0,1,1,0,1,0,1,1,0,1,0,1],
+    [1,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+    [1,0,1,1,0,1,1,1,1,1,0,1,1,0,1],
+    [1,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+    [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
+  ];
 
   // Hearts Game Logic (UNCHANGED)
   useEffect(() => {
@@ -51,52 +82,46 @@ const MiniGame: React.FC = () => {
     return () => clearInterval(interval);
   }, [gameActive]);
 
-  // Optimized Harry Potter Game Logic
+  // Pac-Man Game Logic
   useEffect(() => {
-    if (flappyGameActive) {
+    if (pacmanGameActive) {
       const gameLoop = () => {
-        // Update player position
-        setPlayerY(prev => {
-          const newY = prev + velocity;
-          if (newY < 0 || newY > 90) {
-            setFlappyGameActive(false);
-            return prev;
+        // Move Dementors
+        setDementors(prev => prev.map((dementor, index) => {
+          let newX = dementor.x;
+          let newY = dementor.y;
+          let newDirection = dementor.direction;
+
+          // Simple AI: try to move towards player, but respect walls
+          const dx = playerPos.x - dementor.x;
+          const dy = playerPos.y - dementor.y;
+          
+          let moveX = 0, moveY = 0;
+          if (Math.abs(dx) > Math.abs(dy)) {
+            moveX = dx > 0 ? 1 : -1;
+          } else {
+            moveY = dy > 0 ? 1 : -1;
           }
-          return newY;
-        });
 
-        // Simple gravity
-        setVelocity(prev => prev + 0.6);
-
-        // Update obstacles
-        setObstacles(prev => {
-          let newObstacles = prev.map(obstacle => ({
-            ...obstacle,
-            x: obstacle.x - 3
-          })).filter(obstacle => obstacle.x > -15);
-
-          // Check for scoring
-          newObstacles.forEach(obstacle => {
-            if (!obstacle.passed && obstacle.x < 10) {
-              obstacle.passed = true;
-              setFlappyScore(prevScore => prevScore + 10);
+          if (maze[dementor.y + moveY] && maze[dementor.y + moveY][dementor.x + moveX] === 0) {
+            newX += moveX;
+            newY += moveY;
+          } else {
+            // If can't move towards player, move randomly
+            const directions = [
+              { x: 0, y: -1 }, { x: 1, y: 0 }, { x: 0, y: 1 }, { x: -1, y: 0 }
+            ];
+            for (const dir of directions) {
+              if (maze[dementor.y + dir.y] && maze[dementor.y + dir.y][dementor.x + dir.x] === 0) {
+                newX += dir.x;
+                newY += dir.y;
+                break;
+              }
             }
-          });
-
-          // Add new obstacles
-          if (newObstacles.length === 0 || newObstacles[newObstacles.length - 1].x < 70) {
-            newObstacles.push({
-              id: Date.now(),
-              x: 110,
-              gap: Math.random() * 30 + 35,
-              height: 0,
-              type: 'castle',
-              passed: false
-            });
           }
 
-          return newObstacles;
-        });
+          return { x: newX, y: newY, direction: newDirection };
+        }));
 
         gameLoopRef.current = requestAnimationFrame(gameLoop);
       };
@@ -108,30 +133,41 @@ const MiniGame: React.FC = () => {
         cancelAnimationFrame(gameLoopRef.current);
       }
     };
-  }, [flappyGameActive, velocity]);
+  }, [pacmanGameActive, playerPos]);
 
-  // Power-up effects timer
+  // Check collisions and game end conditions
   useEffect(() => {
-    let shieldTimer: NodeJS.Timeout;
-    let speedTimer: NodeJS.Timeout;
+    if (pacmanGameActive) {
+      // Check Dementor collisions
+      const collision = dementors.some(dementor => 
+        dementor.x === playerPos.x && dementor.y === playerPos.y
+      );
+      
+      if (collision && !isPoweredUp) {
+        setPacmanGameActive(false);
+      } else if (collision && isPoweredUp) {
+        // Banish Dementor
+        setPacmanScore(prev => prev + 50);
+        setDementors(prev => prev.filter(d => !(d.x === playerPos.x && d.y === playerPos.y)));
+      }
 
-    if (playerEffects.shield) {
-      shieldTimer = setTimeout(() => {
-        setPlayerEffects(prev => ({ ...prev, shield: false }));
+      // Check if all snitches collected
+      if (snitches.size === 0) {
+        setPacmanGameActive(false);
+      }
+    }
+  }, [playerPos, dementors, pacmanGameActive, isPoweredUp, snitches.size]);
+
+  // Power-up timer
+  useEffect(() => {
+    if (isPoweredUp) {
+      const timer = setTimeout(() => {
+        setIsPoweredUp(false);
+        setVulnerableDementors(new Set());
       }, 5000);
+      return () => clearTimeout(timer);
     }
-
-    if (playerEffects.speed) {
-      speedTimer = setTimeout(() => {
-        setPlayerEffects(prev => ({ ...prev, speed: false }));
-      }, 3000);
-    }
-
-    return () => {
-      clearTimeout(shieldTimer);
-      clearTimeout(speedTimer);
-    };
-  }, [playerEffects]);
+  }, [isPoweredUp]);
 
   const startHeartsGame = () => {
     setScore(0);
@@ -141,12 +177,37 @@ const MiniGame: React.FC = () => {
     setGameMessage("Collect the hearts! 💕");
   };
 
-  const startFlappyGame = () => {
-    setFlappyScore(0);
-    setFlappyGameActive(true);
-    setPlayerY(50);
-    setVelocity(0);
-    setObstacles([]);
+  const startPacmanGame = () => {
+    setPacmanScore(0);
+    setPacmanGameActive(true);
+    setPlayerPos({ x: 7, y: 7 });
+    setDementors([
+      { x: 1, y: 1, direction: 1 },
+      { x: 13, y: 1, direction: 2 },
+      { x: 1, y: 13, direction: 3 },
+      { x: 13, y: 13, direction: 4 }
+    ]);
+    setIsPoweredUp(false);
+    setVulnerableDementors(new Set());
+    
+    // Initialize snitches and power-ups
+    const newSnitches = new Set<string>();
+    const newPowerUps = new Set<string>();
+    
+    for (let y = 0; y < 15; y++) {
+      for (let x = 0; x < 15; x++) {
+        if (maze[y][x] === 0 && !(x === 7 && y === 7)) {
+          if (Math.random() < 0.1) {
+            newPowerUps.add(`${x},${y}`);
+          } else if (Math.random() < 0.7) {
+            newSnitches.add(`${x},${y}`);
+          }
+        }
+      }
+    }
+    
+    setSnitches(newSnitches);
+    setPowerUps(newPowerUps);
   };
 
   const collectHeart = (id: number) => {
@@ -158,26 +219,67 @@ const MiniGame: React.FC = () => {
     setScore(prev => prev + 10);
   };
 
-  const flap = () => {
-    if (flappyGameActive) {
-      setVelocity(-8);
-    }
+  const movePlayer = (direction: string) => {
+    if (!pacmanGameActive) return;
+    
+    setPlayerPos(prev => {
+      let newX = prev.x;
+      let newY = prev.y;
+      
+      switch (direction) {
+        case 'up': newY = Math.max(0, prev.y - 1); break;
+        case 'down': newY = Math.min(14, prev.y + 1); break;
+        case 'left': newX = Math.max(0, prev.x - 1); break;
+        case 'right': newX = Math.min(14, prev.x + 1); break;
+      }
+      
+      // Check if move is valid (not a wall)
+      if (maze[newY][newX] === 1) {
+        return prev;
+      }
+      
+      // Check for snitch collection
+      const pos = `${newX},${newY}`;
+      if (snitches.has(pos)) {
+        setSnitches(prev => {
+          const newSet = new Set(prev);
+          newSet.delete(pos);
+          return newSet;
+        });
+        setPacmanScore(prev => prev + 10);
+      }
+      
+      // Check for power-up collection
+      if (powerUps.has(pos)) {
+        setPowerUps(prev => {
+          const newSet = new Set(prev);
+          newSet.delete(pos);
+          return newSet;
+        });
+        setIsPoweredUp(true);
+        setVulnerableDementors(new Set([0, 1, 2, 3]));
+      }
+      
+      return { x: newX, y: newY };
+    });
   };
 
-  // Add keyboard support
+  // Keyboard controls
   useEffect(() => {
     const handleKeyPress = (e: KeyboardEvent) => {
-      if (e.code === 'Space' && flappyGameActive) {
-        e.preventDefault();
-        setVelocity(-8);
+      if (pacmanGameActive) {
+        switch (e.key) {
+          case 'ArrowUp': movePlayer('up'); break;
+          case 'ArrowDown': movePlayer('down'); break;
+          case 'ArrowLeft': movePlayer('left'); break;
+          case 'ArrowRight': movePlayer('right'); break;
+        }
       }
     };
 
     window.addEventListener('keydown', handleKeyPress);
     return () => window.removeEventListener('keydown', handleKeyPress);
-  }, [flappyGameActive]);
-
-
+  }, [pacmanGameActive]);
 
   return (
     <div className="min-h-screen pt-24 p-6">
@@ -210,17 +312,17 @@ const MiniGame: React.FC = () => {
             💕 Heart Collection
           </button>
           <button
-            onClick={() => setCurrentGame('flappy')}
+            onClick={() => setCurrentGame('pacman')}
             className={`px-6 py-3 rounded-full font-medium transition-all duration-300 hover:scale-105 ${
-              currentGame === 'flappy' ? 'shadow-lg' : 'opacity-70'
+              currentGame === 'pacman' ? 'shadow-lg' : 'opacity-70'
             }`}
             style={{
-              background: currentGame === 'flappy' 
+              background: currentGame === 'pacman' 
                 ? `linear-gradient(45deg, ${themeConfig.primary}, ${themeConfig.secondary})`
                 : 'rgba(255, 255, 255, 0.1)'
             }}
           >
-            🧙‍♂️ Hogwarts Flight
+            🧙‍♂️ Dementor Escape
           </button>
         </div>
 
@@ -283,117 +385,101 @@ const MiniGame: React.FC = () => {
           </div>
         )}
 
-        {currentGame === 'flappy' && (
+        {currentGame === 'pacman' && (
           <div className="glass-card p-8 mb-8">
             <div className="flex justify-between items-center mb-6">
               <div className="flex items-center space-x-6">
                 <div className="flex items-center">
                   <Star className="text-primary mr-2" size={20} />
-                  <span className="text-xl font-bold">Score: {flappyScore}</span>
+                  <span className="text-xl font-bold">Score: {pacmanScore}</span>
                 </div>
+                <div className="flex items-center">
+                  <span className="text-lg">🏐 Snitches: {snitches.size}</span>
+                </div>
+                {isPoweredUp && (
+                  <div className="flex items-center">
+                    <span className="text-lg animate-pulse">⚡ POWERED UP!</span>
+                  </div>
+                )}
               </div>
               <button
-                onClick={startFlappyGame}
+                onClick={startPacmanGame}
                 className="px-6 py-3 rounded-full font-medium transition-all duration-300 hover:scale-105"
                 style={{
                   background: `linear-gradient(45deg, ${themeConfig.primary}, ${themeConfig.secondary})`
                 }}
               >
-                {flappyGameActive ? <RotateCcw size={20} /> : <Play size={20} />}
-                <span className="ml-2">{flappyGameActive ? 'Restart' : 'Start Flight'}</span>
+                {pacmanGameActive ? <RotateCcw size={20} /> : <Play size={20} />}
+                <span className="ml-2">{pacmanGameActive ? 'Restart' : 'Start Game'}</span>
               </button>
             </div>
 
             <div className="text-center mb-6">
               <p className="text-lg">
-                {flappyGameActive 
-                  ? 'Click or press SPACEBAR to fly! Avoid the castle towers! 🧙‍♂️' 
-                  : 'Ready for a magical flight through Hogwarts?'
+                {pacmanGameActive 
+                  ? 'Use arrow keys to move! Collect snitches and avoid Dementors! ⚡ for power!' 
+                  : 'Navigate the maze, collect Golden Snitches, and escape the Dementors!'
                 }
               </p>
             </div>
 
-            <div 
-              className="relative rounded-lg h-96 overflow-hidden cursor-pointer"
-              style={{
-                background: 'linear-gradient(to bottom, #1e3a8a 0%, #3730a3 50%, #581c87 100%)'
-              }}
-              onClick={flap}
-            >
-              {/* Player (Harry on Broomstick) */}
-              <div
-                className="absolute text-4xl transition-all duration-75"
-                style={{
-                  left: '10%',
-                  top: `${playerY}%`,
-                  transform: 'translate(-50%, -50%)'
-                }}
-              >
-                🧙‍♂️
+            <div className="flex justify-center">
+              <div className="grid grid-cols-15 gap-0 bg-gray-800 p-2 rounded-lg">
+                {maze.map((row, y) => 
+                  row.map((cell, x) => (
+                    <div
+                      key={`${x}-${y}`}
+                      className="w-6 h-6 flex items-center justify-center text-sm"
+                      style={{
+                        backgroundColor: cell === 1 ? '#4a5568' : '#1a202c'
+                      }}
+                    >
+                      {/* Player */}
+                      {playerPos.x === x && playerPos.y === y && '🧙‍♂️'}
+                      
+                      {/* Dementors */}
+                      {dementors.map((dementor, index) => 
+                        dementor.x === x && dementor.y === y && (
+                          <span 
+                            key={index}
+                            className={isPoweredUp ? 'opacity-50' : ''}
+                          >
+                            {isPoweredUp ? '👻' : '🖤'}
+                          </span>
+                        )
+                      )}
+                      
+                      {/* Snitches */}
+                      {snitches.has(`${x},${y}`) && '🏐'}
+                      
+                      {/* Power-ups */}
+                      {powerUps.has(`${x},${y}`) && '⚡'}
+                      
+                      {/* Walls */}
+                      {cell === 1 && '🪨'}
+                    </div>
+                  ))
+                )}
               </div>
-
-              {/* Simple Obstacles */}
-              {obstacles.map(obstacle => (
-                <React.Fragment key={obstacle.id}>
-                  {/* Top castle */}
-                  <div
-                    className="absolute rounded-b-lg"
-                    style={{
-                      left: `${obstacle.x}%`,
-                      top: '0%',
-                      width: '10%',
-                      height: `${obstacle.gap}%`,
-                      background: 'linear-gradient(to bottom, #374151, #1f2937)'
-                    }}
-                  >
-                    <div className="text-center pt-1 text-xl">🏰</div>
-                  </div>
-                  {/* Bottom castle */}
-                  <div
-                    className="absolute rounded-t-lg"
-                    style={{
-                      left: `${obstacle.x}%`,
-                      bottom: '0%',
-                      width: '10%',
-                      height: `${100 - obstacle.gap - 25}%`,
-                      background: 'linear-gradient(to top, #374151, #1f2937)'
-                    }}
-                  >
-                    <div className="absolute bottom-1 left-1/2 transform -translate-x-1/2 text-xl">🏰</div>
-                  </div>
-                </React.Fragment>
-              ))}
-
-              {/* Simple background stars */}
-              {Array.from({ length: 5 }).map((_, i) => (
-                <div
-                  key={i}
-                  className="absolute text-yellow-300 opacity-60"
-                  style={{
-                    left: `${(i * 20 + 10) % 90}%`,
-                    top: `${(i * 30 + 15) % 70}%`,
-                    fontSize: '16px'
-                  }}
-                >
-                  ⭐
-                </div>
-              ))}
-
-              {!flappyGameActive && (
-                <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-60">
-                  <div className="text-center text-white">
-                    <div className="text-8xl mb-4">🧙‍♂️</div>
-                    <p className="text-3xl font-bold mb-4">Hogwarts Flight</p>
-                    <p className="text-lg opacity-90 mb-4">
-                      Fly through the magical towers of Hogwarts!
-                    </p>
-                    <p className="text-sm opacity-75">
-                      Click anywhere or press SPACEBAR to flap!
-                    </p>
-                  </div>
-                </div>
-              )}
             </div>
+
+            {!pacmanGameActive && (
+              <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-60 rounded-lg">
+                <div className="text-center text-white">
+                  <div className="text-8xl mb-4">🧙‍♂️</div>
+                  <p className="text-3xl font-bold mb-4">Dementor Escape</p>
+                  <p className="text-lg opacity-90 mb-4">
+                    Navigate the maze and collect all Golden Snitches!
+                  </p>
+                  <p className="text-sm opacity-75 mb-2">
+                    Use arrow keys to move
+                  </p>
+                  <p className="text-sm opacity-75">
+                    Collect ⚡ to make Dementors vulnerable!
+                  </p>
+                </div>
+              </div>
+            )}
           </div>
         )}
 
@@ -402,7 +488,7 @@ const MiniGame: React.FC = () => {
           <p className="text-lg mb-4">
             {currentGame === 'hearts' 
               ? 'Can you collect more than 100 love points for Samragi?' 
-              : 'How far can you fly through the magical world of Hogwarts?'
+              : 'How many Golden Snitches can you collect while escaping the Dementors?'
             }
           </p>
           <div className="flex justify-center space-x-4">
@@ -417,14 +503,14 @@ const MiniGame: React.FC = () => {
               <div className="text-3xl mb-2">{currentGame === 'hearts' ? '💖' : '⚡'}</div>
               <div className="text-sm">{currentGame === 'hearts' ? '51-100 points' : '51-150 points'}</div>
               <div className="text-xs opacity-80">
-                {currentGame === 'hearts' ? 'Love Master!' : 'Skilled Flyer!'}
+                {currentGame === 'hearts' ? 'Love Master!' : 'Skilled Escapee!'}
               </div>
             </div>
             <div className="text-center">
               <div className="text-3xl mb-2">{currentGame === 'hearts' ? '💝' : '🏆'}</div>
               <div className="text-sm">{currentGame === 'hearts' ? '100+ points' : '150+ points'}</div>
               <div className="text-xs opacity-80">
-                {currentGame === 'hearts' ? 'Ultimate Romantic!' : 'Master of Magic!'}
+                {currentGame === 'hearts' ? 'Ultimate Romantic!' : 'Dementor Master!'}
               </div>
             </div>
           </div>
