@@ -1,13 +1,35 @@
-// Update this page (the content is just a fallback if you fail to update the page)
+
+import React, { useState, useEffect } from 'react';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { ThemeProvider } from '../contexts/ThemeContext';
+import { MusicProvider } from '../contexts/MusicContext';
+import Navigation from '../components/Navigation';
+import LoveLetter from '../components/LoveLetter';
+import Gallery from '../components/Gallery';
+import MiniGame from '../components/MiniGame';
+import ThemeSelector from '../components/ThemeSelector';
+import FloatingElements from '../components/FloatingElements';
+import './Index.css';
 
 const Index = () => {
+  const [currentPage, setCurrentPage] = useState('love-letter');
+
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background">
-      <div className="text-center">
-        <h1 className="text-4xl font-bold mb-4">Welcome to Your Blank App</h1>
-        <p className="text-xl text-muted-foreground">Start building your amazing project here!</p>
-      </div>
-    </div>
+    <ThemeProvider>
+      <MusicProvider>
+        <div className="app-container">
+          <FloatingElements />
+          <Navigation currentPage={currentPage} setCurrentPage={setCurrentPage} />
+          <ThemeSelector />
+          
+          <main className="main-content">
+            {currentPage === 'love-letter' && <LoveLetter />}
+            {currentPage === 'gallery' && <Gallery />}
+            {currentPage === 'mini-game' && <MiniGame />}
+          </main>
+        </div>
+      </MusicProvider>
+    </ThemeProvider>
   );
 };
 
