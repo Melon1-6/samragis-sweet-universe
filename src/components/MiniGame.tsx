@@ -82,11 +82,11 @@ const MiniGame: React.FC = () => {
     return () => clearInterval(interval);
   }, [gameActive]);
 
-  // Pac-Man Game Logic
+  // Pac-Man Game Logic with slow Dementors
   useEffect(() => {
     if (pacmanGameActive) {
-      const gameLoop = () => {
-        // Move Dementors
+      const dementorMoveInterval = setInterval(() => {
+        // Move Dementors slowly (every 800ms)
         setDementors(prev => prev.map((dementor, index) => {
           let newX = dementor.x;
           let newY = dementor.y;
@@ -122,17 +122,12 @@ const MiniGame: React.FC = () => {
 
           return { x: newX, y: newY, direction: newDirection };
         }));
+      }, 800); // Dementors move every 800ms (super slow!)
 
-        gameLoopRef.current = requestAnimationFrame(gameLoop);
+      return () => {
+        clearInterval(dementorMoveInterval);
       };
-      gameLoopRef.current = requestAnimationFrame(gameLoop);
     }
-
-    return () => {
-      if (gameLoopRef.current) {
-        cancelAnimationFrame(gameLoopRef.current);
-      }
-    };
   }, [pacmanGameActive, playerPos]);
 
   // Check collisions and game end conditions
@@ -473,10 +468,10 @@ const MiniGame: React.FC = () => {
             </div>
 
             {!pacmanGameActive && (
-              <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-60 rounded-lg">
+              <div className="mt-4 p-6 bg-black bg-opacity-60 rounded-lg">
                 <div className="text-center text-white">
-                  <div className="text-8xl mb-4">🧙‍♂️</div>
-                  <p className="text-3xl font-bold mb-4">Dementor Escape</p>
+                  <div className="text-6xl mb-4">🧙‍♂️</div>
+                  <p className="text-2xl font-bold mb-4">Dementor Escape</p>
                   <p className="text-lg opacity-90 mb-4">
                     Navigate the maze and collect all Golden Snitches!
                   </p>
