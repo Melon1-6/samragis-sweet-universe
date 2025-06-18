@@ -424,14 +424,23 @@ const MiniGame: React.FC = () => {
             </div>
 
             <div className="flex justify-center">
-              <div className="grid grid-cols-15 gap-0 bg-gray-800 p-2 rounded-lg">
+              <div 
+                className="inline-grid gap-0 bg-gray-800 p-2 rounded-lg"
+                style={{ 
+                  gridTemplateColumns: 'repeat(15, 1fr)',
+                  maxWidth: '400px',
+                  aspectRatio: '1/1'
+                }}
+              >
                 {maze.map((row, y) => 
                   row.map((cell, x) => (
                     <div
                       key={`${x}-${y}`}
-                      className="w-6 h-6 flex items-center justify-center text-sm"
+                      className="flex items-center justify-center text-xs border border-gray-700"
                       style={{
-                        backgroundColor: cell === 1 ? '#4a5568' : '#1a202c'
+                        backgroundColor: cell === 1 ? '#4a5568' : '#1a202c',
+                        width: '24px',
+                        height: '24px'
                       }}
                     >
                       {/* Player */}
