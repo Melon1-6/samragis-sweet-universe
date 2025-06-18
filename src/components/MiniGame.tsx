@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { useTheme } from '../contexts/ThemeContext';
 import { Heart, Star, Sparkles, Play, RotateCcw } from 'lucide-react';
@@ -14,15 +13,20 @@ const MiniGame: React.FC = () => {
   const [hearts, setHearts] = useState<Array<{ id: number; x: number; y: number; collected: boolean }>>([]);
   const [gameMessage, setGameMessage] = useState("Click hearts to collect love points! 💕");
 
-  // Flappy Bird Game State
+  // Harry Potter Broomstick Game State
   const [flappyScore, setFlappyScore] = useState(0);
   const [flappyGameActive, setFlappyGameActive] = useState(false);
   const [playerY, setPlayerY] = useState(50);
   const [velocity, setVelocity] = useState(0);
-  const [obstacles, setObstacles] = useState<Array<{ id: number; x: number; gap: number; passed: boolean }>>([]);
+  const [obstacles, setObstacles] = useState<Array<{ id: number; x: number; gap: number; height: number; type: 'castle' | 'tree' | 'tower'; passed: boolean }>>([]);
+  const [particles, setParticles] = useState<Array<{ id: number; x: number; y: number; type: 'star' | 'snitch' | 'spell' }>>([]);
+  const [gameSpeed, setGameSpeed] = useState(2);
+  const [distance, setDistance] = useState(0);
+  const [powerUps, setPowerUps] = useState<Array<{ id: number; x: number; y: number; type: 'shield' | 'speed' | 'snitch'; collected: boolean }>>([]);
+  const [playerEffects, setPlayerEffects] = useState({ shield: false, speed: false });
   const gameLoopRef = useRef<number>();
 
-  // Hearts Game Logic
+  // Hearts Game Logic (UNCHANGED)
   useEffect(() => {
     let interval: NodeJS.Timeout;
     if (gameActive && timeLeft > 0) {
@@ -52,38 +56,105 @@ const MiniGame: React.FC = () => {
     return () => clearInterval(interval);
   }, [gameActive]);
 
-  // Flappy Bird Game Logic
+  // Enhanced Harry Potter Game Logic
   useEffect(() => {
     if (flappyGameActive) {
       const gameLoop = () => {
+        // Update player position
         setPlayerY(prev => {
           const newY = prev + velocity;
-          if (newY < 0 || newY > 90) {
-            setFlappyGameActive(false);
-            return prev;
+          if (newY < 5 || newY > 85) {
+            if (!playerEffects.shield) {
+              setFlappyGameActive(false);
+              return prev;
+            }
           }
-          return newY;
+          return Math.max(5, Math.min(85, newY));
         });
 
-        setVelocity(prev => prev + 0.5);
+        // Update velocity with more realistic physics
+        setVelocity(prev => Math.min(12, prev + 0.4));
 
+        // Update distance and speed
+        setDistance(prev => prev + gameSpeed);
+        setGameSpeed(prev => Math.min(4, prev + 0.001)); // Gradually increase difficulty
+
+        // Update obstacles
         setObstacles(prev => {
-          const newObstacles = prev.map(obstacle => ({
+          let newObstacles = prev.map(obstacle => ({
             ...obstacle,
-            x: obstacle.x - 2
-          })).filter(obstacle => obstacle.x > -10);
+            x: obstacle.x - gameSpeed
+          })).filter(obstacle => obstacle.x > -15);
 
-          // Add new obstacles
-          if (prev.length === 0 || prev[prev.length - 1].x < 70) {
+          // Check for scoring
+          newObstacles.forEach(obstacle => {
+            if (!obstacle.passed && obstacle.x < 8) {
+              obstacle.passed = true;
+              setFlappyScore(prevScore => prevScore + 10);
+            }
+          });
+
+          // Add new obstacles with variety
+          if (newObstacles.length === 0 || newObstacles[newObstacles.length - 1].x < 60) {
+            const obstacleTypes: ('castle' | 'tree' | 'tower')[] = ['castle', 'tree', 'tower'];
+            const type = obstacleTypes[Math.floor(Math.random() * obstacleTypes.length)];
+            const baseGap = type === 'castle' ? 35 : type === 'tree' ? 30 : 25;
+            
             newObstacles.push({
-              id: Date.now(),
-              x: 100,
-              gap: Math.random() * 40 + 30,
+              id: Date.now() + Math.random(),
+              x: 110,
+              gap: Math.random() * 25 + baseGap,
+              height: Math.random() * 20 + 20,
+              type,
               passed: false
             });
           }
 
           return newObstacles;
+        });
+
+        // Update power-ups
+        setPowerUps(prev => {
+          let newPowerUps = prev.map(powerUp => ({
+            ...powerUp,
+            x: powerUp.x - gameSpeed
+          })).filter(powerUp => powerUp.x > -10 && !powerUp.collected);
+
+          // Add new power-ups occasionally
+          if (Math.random() < 0.003 && newPowerUps.length < 2) {
+            const types: ('shield' | 'speed' | 'snitch')[] = ['shield', 'speed', 'snitch'];
+            newPowerUps.push({
+              id: Date.now() + Math.random(),
+              x: 120,
+              y: Math.random() * 60 + 20,
+              type: types[Math.floor(Math.random() * types.length)],
+              collected: false
+            });
+          }
+
+          return newPowerUps;
+        });
+
+        // Update magical particles
+        setParticles(prev => {
+          let newParticles = prev.map(particle => ({
+            ...particle,
+            x: particle.x - gameSpeed * 0.5,
+            y: particle.y + Math.sin(Date.now() * 0.01 + particle.id) * 0.5
+          })).filter(particle => particle.x > -10);
+
+          // Add new particles
+          if (Math.random() < 0.1) {
+            const types: ('star' | 'snitch' | 'spell')[] = ['star', 'snitch', 'spell'];
+            newParticles.push({
+              id: Date.now() + Math.random(),
+              x: 110,
+              y: Math.random() * 80 + 10,
+              type: types[Math.floor(Math.random() * types.length)]
+            });
+          }
+
+          return newParticles.slice(-20); // Limit particles for performance
         });
 
         gameLoopRef.current = requestAnimationFrame(gameLoop);
@@ -96,7 +167,30 @@ const MiniGame: React.FC = () => {
         cancelAnimationFrame(gameLoopRef.current);
       }
     };
-  }, [flappyGameActive, velocity]);
+  }, [flappyGameActive, velocity, gameSpeed, playerEffects.shield]);
+
+  // Power-up effects timer
+  useEffect(() => {
+    let shieldTimer: NodeJS.Timeout;
+    let speedTimer: NodeJS.Timeout;
+
+    if (playerEffects.shield) {
+      shieldTimer = setTimeout(() => {
+        setPlayerEffects(prev => ({ ...prev, shield: false }));
+      }, 5000);
+    }
+
+    if (playerEffects.speed) {
+      speedTimer = setTimeout(() => {
+        setPlayerEffects(prev => ({ ...prev, speed: false }));
+      }, 3000);
+    }
+
+    return () => {
+      clearTimeout(shieldTimer);
+      clearTimeout(speedTimer);
+    };
+  }, [playerEffects]);
 
   const startHeartsGame = () => {
     setScore(0);
@@ -112,6 +206,11 @@ const MiniGame: React.FC = () => {
     setPlayerY(50);
     setVelocity(0);
     setObstacles([]);
+    setParticles([]);
+    setGameSpeed(2);
+    setDistance(0);
+    setPowerUps([]);
+    setPlayerEffects({ shield: false, speed: false });
   };
 
   const collectHeart = (id: number) => {
@@ -125,7 +224,51 @@ const MiniGame: React.FC = () => {
 
   const flap = () => {
     if (flappyGameActive) {
-      setVelocity(-8);
+      const flapPower = playerEffects.speed ? -10 : -7;
+      setVelocity(flapPower);
+    }
+  };
+
+  const collectPowerUp = (id: number, type: 'shield' | 'speed' | 'snitch') => {
+    setPowerUps(prev => 
+      prev.map(powerUp => 
+        powerUp.id === id ? { ...powerUp, collected: true } : powerUp
+      )
+    );
+    
+    if (type === 'shield') {
+      setPlayerEffects(prev => ({ ...prev, shield: true }));
+    } else if (type === 'speed') {
+      setPlayerEffects(prev => ({ ...prev, speed: true }));
+    } else if (type === 'snitch') {
+      setFlappyScore(prev => prev + 50);
+    }
+  };
+
+  const getObstacleEmoji = (type: 'castle' | 'tree' | 'tower') => {
+    switch (type) {
+      case 'castle': return '🏰';
+      case 'tree': return '🌲';
+      case 'tower': return '🗼';
+      default: return '🏰';
+    }
+  };
+
+  const getPowerUpEmoji = (type: 'shield' | 'speed' | 'snitch') => {
+    switch (type) {
+      case 'shield': return '🛡️';
+      case 'speed': return '⚡';
+      case 'snitch': return '🏐';
+      default: return '✨';
+    }
+  };
+
+  const getParticleEmoji = (type: 'star' | 'snitch' | 'spell') => {
+    switch (type) {
+      case 'star': return '⭐';
+      case 'snitch': return '✨';
+      case 'spell': return '🔮';
+      default: return '✨';
     }
   };
 
@@ -170,7 +313,7 @@ const MiniGame: React.FC = () => {
                 : 'rgba(255, 255, 255, 0.1)'
             }}
           >
-            🧙‍♂️ Magical Flight
+            🧙‍♂️ Hogwarts Flight
           </button>
         </div>
 
@@ -236,11 +379,24 @@ const MiniGame: React.FC = () => {
         {currentGame === 'flappy' && (
           <div className="glass-card p-8 mb-8">
             <div className="flex justify-between items-center mb-6">
-              <div className="flex items-center space-x-4">
+              <div className="flex items-center space-x-6">
                 <div className="flex items-center">
                   <Star className="text-primary mr-2" size={20} />
                   <span className="text-xl font-bold">Score: {flappyScore}</span>
                 </div>
+                <div className="flex items-center">
+                  <span className="text-lg font-medium">Distance: {Math.floor(distance/10)}m</span>
+                </div>
+                {playerEffects.shield && (
+                  <div className="flex items-center text-blue-400">
+                    <span className="text-sm">🛡️ Shield Active</span>
+                  </div>
+                )}
+                {playerEffects.speed && (
+                  <div className="flex items-center text-yellow-400">
+                    <span className="text-sm">⚡ Speed Boost</span>
+                  </div>
+                )}
               </div>
               <button
                 onClick={startFlappyGame}
@@ -256,77 +412,142 @@ const MiniGame: React.FC = () => {
 
             <div className="text-center mb-6">
               <p className="text-lg">
-                {flappyGameActive ? 'Click to flap your broomstick! 🧙‍♂️' : 'Ready for a magical flight?'}
+                {flappyGameActive 
+                  ? 'Click to flap through Hogwarts! Collect power-ups and avoid obstacles! 🧙‍♂️✨' 
+                  : 'Embark on a magical journey through Hogwarts castle!'
+                }
               </p>
             </div>
 
             <div 
-              className="relative bg-gradient-to-b from-blue-900 to-blue-600 rounded-lg h-96 overflow-hidden cursor-pointer"
+              className="relative rounded-lg h-96 overflow-hidden cursor-pointer"
+              style={{
+                background: 'linear-gradient(to bottom, #1e3a8a 0%, #3730a3 30%, #581c87 70%, #7c2d12 100%)'
+              }}
               onClick={flap}
             >
-              {/* Player (Broomstick) */}
+              {/* Magical Background Particles */}
+              {particles.map(particle => (
+                <div
+                  key={particle.id}
+                  className="absolute animate-pulse"
+                  style={{
+                    left: `${particle.x}%`,
+                    top: `${particle.y}%`,
+                    fontSize: '12px',
+                    opacity: 0.7
+                  }}
+                >
+                  {getParticleEmoji(particle.type)}
+                </div>
+              ))}
+
+              {/* Player (Harry on Broomstick) */}
               <div
-                className="absolute text-3xl transition-all duration-100"
+                className={`absolute text-4xl transition-all duration-100 ${
+                  playerEffects.shield ? 'drop-shadow-lg' : ''
+                }`}
                 style={{
-                  left: '10%',
+                  left: '8%',
                   top: `${playerY}%`,
-                  transform: 'translate(-50%, -50%)'
+                  transform: 'translate(-50%, -50%)',
+                  filter: playerEffects.shield ? 'drop-shadow(0 0 10px #3b82f6)' : 'none'
                 }}
               >
                 🧙‍♂️
+                {playerEffects.speed && (
+                  <div className="absolute -right-2 -top-1 text-lg">⚡</div>
+                )}
               </div>
 
-              {/* Obstacles (Magical barriers) */}
+              {/* Power-ups */}
+              {powerUps.map(powerUp => (
+                !powerUp.collected && (
+                  <button
+                    key={powerUp.id}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      collectPowerUp(powerUp.id, powerUp.type);
+                    }}
+                    className="absolute animate-bounce hover:scale-125 transition-transform duration-200 text-2xl"
+                    style={{
+                      left: `${powerUp.x}%`,
+                      top: `${powerUp.y}%`,
+                      transform: 'translate(-50%, -50%)'
+                    }}
+                  >
+                    {getPowerUpEmoji(powerUp.type)}
+                  </button>
+                )
+              ))}
+
+              {/* Enhanced Obstacles */}
               {obstacles.map(obstacle => (
                 <React.Fragment key={obstacle.id}>
                   {/* Top obstacle */}
                   <div
-                    className="absolute bg-gradient-to-b from-purple-800 to-purple-600 rounded-b-lg"
+                    className="absolute rounded-b-lg shadow-lg"
                     style={{
                       left: `${obstacle.x}%`,
                       top: '0%',
-                      width: '8%',
-                      height: `${obstacle.gap}%`
+                      width: '12%',
+                      height: `${obstacle.gap}%`,
+                      background: 'linear-gradient(to bottom, #374151, #1f2937)',
+                      border: '2px solid #6b7280'
                     }}
                   >
-                    <div className="text-center pt-2">✨</div>
+                    <div className="text-center pt-2 text-2xl">
+                      {getObstacleEmoji(obstacle.type)}
+                    </div>
                   </div>
                   {/* Bottom obstacle */}
                   <div
-                    className="absolute bg-gradient-to-t from-purple-800 to-purple-600 rounded-t-lg"
+                    className="absolute rounded-t-lg shadow-lg"
                     style={{
                       left: `${obstacle.x}%`,
                       bottom: '0%',
-                      width: '8%',
-                      height: `${100 - obstacle.gap - 25}%`
+                      width: '12%',
+                      height: `${100 - obstacle.gap - 30}%`,
+                      background: 'linear-gradient(to top, #374151, #1f2937)',
+                      border: '2px solid #6b7280'
                     }}
                   >
-                    <div className="text-center pb-2">⚡</div>
+                    <div className="absolute bottom-2 left-1/2 transform -translate-x-1/2 text-2xl">
+                      {getObstacleEmoji(obstacle.type)}
+                    </div>
                   </div>
                 </React.Fragment>
               ))}
 
-              {/* Stars background */}
-              {Array.from({ length: 20 }).map((_, i) => (
+              {/* Floating castle elements in background */}
+              {Array.from({ length: 8 }).map((_, i) => (
                 <div
                   key={i}
-                  className="absolute text-yellow-300 animate-pulse"
+                  className="absolute text-gray-600 opacity-30"
                   style={{
-                    left: `${Math.random() * 100}%`,
-                    top: `${Math.random() * 100}%`,
-                    fontSize: `${Math.random() * 10 + 10}px`
+                    left: `${(i * 15) % 100}%`,
+                    top: `${(i * 23) % 80 + 10}%`,
+                    fontSize: `${Math.random() * 20 + 15}px`,
+                    animation: `float ${3 + i}s ease-in-out infinite alternate`
                   }}
                 >
-                  ⭐
+                  {i % 3 === 0 ? '🏰' : i % 3 === 1 ? '🌙' : '☁️'}
                 </div>
               ))}
 
               {!flappyGameActive && (
-                <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50">
+                <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-60">
                   <div className="text-center text-white">
-                    <div className="text-6xl mb-4">🧙‍♂️</div>
-                    <p className="text-2xl font-bold mb-2">Magical Flight</p>
-                    <p className="text-lg opacity-80">Click to start your magical journey!</p>
+                    <div className="text-8xl mb-4">🧙‍♂️</div>
+                    <p className="text-3xl font-bold mb-4">Hogwarts Flight Adventure</p>
+                    <p className="text-lg opacity-90 mb-4">
+                      Fly through the magical world of Hogwarts!
+                    </p>
+                    <p className="text-sm opacity-75">
+                      • Collect power-ups: 🛡️ Shield, ⚡ Speed Boost, 🏐 Golden Snitch<br/>
+                      • Avoid castle towers, trees, and magical barriers<br/>
+                      • Click anywhere to flap your broomstick!
+                    </p>
                   </div>
                 </div>
               )}
@@ -335,38 +556,45 @@ const MiniGame: React.FC = () => {
         )}
 
         <div className="glass-card p-6 text-center">
-          <h3 className="text-2xl font-bold mb-4">High Score Challenge!</h3>
+          <h3 className="text-2xl font-bold mb-4">Achievement Levels!</h3>
           <p className="text-lg mb-4">
             {currentGame === 'hearts' 
               ? 'Can you collect more than 100 love points for Samragi?' 
-              : 'How far can you fly on your magical broomstick?'
+              : 'How far can you fly through the magical world of Hogwarts?'
             }
           </p>
           <div className="flex justify-center space-x-4">
             <div className="text-center">
-              <div className="text-3xl mb-2">{currentGame === 'hearts' ? '💕' : '🌟'}</div>
-              <div className="text-sm">{currentGame === 'hearts' ? '0-50 points' : '0-5 obstacles'}</div>
+              <div className="text-3xl mb-2">{currentGame === 'hearts' ? '💕' : '🧙‍♂️'}</div>
+              <div className="text-sm">{currentGame === 'hearts' ? '0-50 points' : '0-100 points'}</div>
               <div className="text-xs opacity-80">
                 {currentGame === 'hearts' ? 'Sweet Start!' : 'Novice Wizard!'}
               </div>
             </div>
             <div className="text-center">
-              <div className="text-3xl mb-2">{currentGame === 'hearts' ? '💖' : '🧙‍♂️'}</div>
-              <div className="text-sm">{currentGame === 'hearts' ? '51-100 points' : '6-15 obstacles'}</div>
+              <div className="text-3xl mb-2">{currentGame === 'hearts' ? '💖' : '⚡'}</div>
+              <div className="text-sm">{currentGame === 'hearts' ? '51-100 points' : '101-300 points'}</div>
               <div className="text-xs opacity-80">
                 {currentGame === 'hearts' ? 'Love Master!' : 'Skilled Flyer!'}
               </div>
             </div>
             <div className="text-center">
-              <div className="text-3xl mb-2">{currentGame === 'hearts' ? '💝' : '⚡'}</div>
-              <div className="text-sm">{currentGame === 'hearts' ? '100+ points' : '15+ obstacles'}</div>
+              <div className="text-3xl mb-2">{currentGame === 'hearts' ? '💝' : '🏆'}</div>
+              <div className="text-sm">{currentGame === 'hearts' ? '100+ points' : '300+ points'}</div>
               <div className="text-xs opacity-80">
-                {currentGame === 'hearts' ? 'Ultimate Romantic!' : 'Master Wizard!'}
+                {currentGame === 'hearts' ? 'Ultimate Romantic!' : 'Master of Magic!'}
               </div>
             </div>
           </div>
         </div>
       </div>
+
+      <style jsx>{`
+        @keyframes float {
+          from { transform: translateY(0px); }
+          to { transform: translateY(-10px); }
+        }
+      `}</style>
     </div>
   );
 };
