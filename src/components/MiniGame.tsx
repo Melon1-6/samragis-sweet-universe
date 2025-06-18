@@ -22,15 +22,21 @@ const MiniGame: React.FC = () => {
   const [pacmanGameActive, setPacmanGameActive] = useState(false);
   const [playerPos, setPlayerPos] = useState({ x: 7, y: 7 });
   const [dementors, setDementors] = useState([
-    { x: 1, y: 1, direction: 1 },
-    { x: 13, y: 1, direction: 2 },
-    { x: 1, y: 13, direction: 3 },
-    { x: 13, y: 13, direction: 4 }
+    { x: 1, y: 1, direction: 1, state: 'normal' },
+    { x: 13, y: 1, direction: 2, state: 'normal' },
+    { x: 1, y: 13, direction: 3, state: 'normal' },
+    { x: 13, y: 13, direction: 4, state: 'normal' },
+    { x: 7, y: 1, direction: 1, state: 'normal' },
+    { x: 1, y: 7, direction: 2, state: 'normal' }
   ]);
   const [snitches, setSnitches] = useState<Set<string>>(new Set());
-  const [powerUps, setPowerUps] = useState<Set<string>>(new Set());
-  const [isPoweredUp, setIsPoweredUp] = useState(false);
-  const [vulnerableDementors, setVulnerableDementors] = useState<Set<number>>(new Set());
+  const [powerUps, setPowerUps] = useState<Array<{ x: number; y: number; type: 'transform' | 'freeze' | 'avada' }>>();
+  const [powerUpStates, setPowerUpStates] = useState({
+    transform: false,
+    freeze: false,
+    avadaUsed: false
+  });
+  const [popup, setPopup] = useState<{ message: string; show: boolean }>({ message: '', show: false });
   const gameLoopRef = useRef<number>();
 
   // Maze layout (15x15 grid, 1 = wall, 0 = path)
@@ -82,12 +88,24 @@ const MiniGame: React.FC = () => {
     return () => clearInterval(interval);
   }, [gameActive]);
 
-  // Pac-Man Game Logic with slow Dementors
+  // Show popup function
+  const showPopup = (message: string) => {
+    setPopup({ message, show: true });
+    setTimeout(() => {
+      setPopup({ message: '', show: false });
+    }, 2000);
+  };
+
+  // Pac-Man Game Logic with enhanced dementors and power-ups
   useEffect(() => {
     if (pacmanGameActive) {
       const dementorMoveInterval = setInterval(() => {
-        // Move Dementors slowly (every 800ms)
         setDementors(prev => prev.map((dementor, index) => {
+          // Don't move if frozen or transformed
+          if (dementor.state === 'frozen' || dementor.state === 'chicken') {
+            return dementor;
+          }
+
           let newX = dementor.x;
           let newY = dementor.y;
           let newDirection = dementor.direction;
@@ -120,9 +138,9 @@ const MiniGame: React.FC = () => {
             }
           }
 
-          return { x: newX, y: newY, direction: newDirection };
+          return { ...dementor, x: newX, y: newY, direction: newDirection };
         }));
-      }, 800); // Dementors move every 800ms (super slow!)
+      }, 800);
 
       return () => {
         clearInterval(dementorMoveInterval);
@@ -130,39 +148,47 @@ const MiniGame: React.FC = () => {
     }
   }, [pacmanGameActive, playerPos]);
 
+  // Power-up effect timers
+  useEffect(() => {
+    if (powerUpStates.transform) {
+      const timer = setTimeout(() => {
+        setPowerUpStates(prev => ({ ...prev, transform: false }));
+        setDementors(prev => prev.map(d => ({ ...d, state: 'normal' })));
+      }, 8000);
+      return () => clearTimeout(timer);
+    }
+  }, [powerUpStates.transform]);
+
+  useEffect(() => {
+    if (powerUpStates.freeze) {
+      const timer = setTimeout(() => {
+        setPowerUpStates(prev => ({ ...prev, freeze: false }));
+        setDementors(prev => prev.map(d => ({ ...d, state: 'normal' })));
+      }, 6000);
+      return () => clearTimeout(timer);
+    }
+  }, [powerUpStates.freeze]);
+
   // Check collisions and game end conditions
   useEffect(() => {
     if (pacmanGameActive) {
       // Check Dementor collisions
       const collision = dementors.some(dementor => 
-        dementor.x === playerPos.x && dementor.y === playerPos.y
+        dementor.x === playerPos.x && dementor.y === playerPos.y && dementor.state === 'normal'
       );
       
-      if (collision && !isPoweredUp) {
+      if (collision) {
         setPacmanGameActive(false);
-      } else if (collision && isPoweredUp) {
-        // Banish Dementor
-        setPacmanScore(prev => prev + 50);
-        setDementors(prev => prev.filter(d => !(d.x === playerPos.x && d.y === playerPos.y)));
+        showPopup("Game Over! 💀");
       }
 
       // Check if all snitches collected
       if (snitches.size === 0) {
         setPacmanGameActive(false);
+        showPopup("Victory! All Snitches Collected! 🏆");
       }
     }
-  }, [playerPos, dementors, pacmanGameActive, isPoweredUp, snitches.size]);
-
-  // Power-up timer
-  useEffect(() => {
-    if (isPoweredUp) {
-      const timer = setTimeout(() => {
-        setIsPoweredUp(false);
-        setVulnerableDementors(new Set());
-      }, 5000);
-      return () => clearTimeout(timer);
-    }
-  }, [isPoweredUp]);
+  }, [playerPos, dementors, pacmanGameActive, snitches.size]);
 
   const startHeartsGame = () => {
     setScore(0);
@@ -177,31 +203,66 @@ const MiniGame: React.FC = () => {
     setPacmanGameActive(true);
     setPlayerPos({ x: 7, y: 7 });
     setDementors([
-      { x: 1, y: 1, direction: 1 },
-      { x: 13, y: 1, direction: 2 },
-      { x: 1, y: 13, direction: 3 },
-      { x: 13, y: 13, direction: 4 }
+      { x: 1, y: 1, direction: 1, state: 'normal' },
+      { x: 13, y: 1, direction: 2, state: 'normal' },
+      { x: 1, y: 13, direction: 3, state: 'normal' },
+      { x: 13, y: 13, direction: 4, state: 'normal' },
+      { x: 7, y: 1, direction: 1, state: 'normal' },
+      { x: 1, y: 7, direction: 2, state: 'normal' }
     ]);
-    setIsPoweredUp(false);
-    setVulnerableDementors(new Set());
+    setPowerUpStates({
+      transform: false,
+      freeze: false,
+      avadaUsed: false
+    });
     
-    // Initialize snitches and power-ups
+    // Initialize snitches
     const newSnitches = new Set<string>();
-    const newPowerUps = new Set<string>();
-    
     for (let y = 0; y < 15; y++) {
       for (let x = 0; x < 15; x++) {
         if (maze[y][x] === 0 && !(x === 7 && y === 7)) {
-          if (Math.random() < 0.1) {
-            newPowerUps.add(`${x},${y}`);
-          } else if (Math.random() < 0.7) {
+          if (Math.random() < 0.6) {
             newSnitches.add(`${x},${y}`);
           }
         }
       }
     }
-    
     setSnitches(newSnitches);
+    
+    // Initialize power-ups (fewer, strategic placement)
+    const newPowerUps = [];
+    const availableSpots = [];
+    
+    for (let y = 0; y < 15; y++) {
+      for (let x = 0; x < 15; x++) {
+        if (maze[y][x] === 0 && !(x === 7 && y === 7)) {
+          availableSpots.push({ x, y });
+        }
+      }
+    }
+    
+    // Add 2-3 transform power-ups
+    for (let i = 0; i < 2; i++) {
+      if (availableSpots.length > 0) {
+        const spot = availableSpots.splice(Math.floor(Math.random() * availableSpots.length), 1)[0];
+        newPowerUps.push({ ...spot, type: 'transform' });
+      }
+    }
+    
+    // Add 2 freeze power-ups
+    for (let i = 0; i < 2; i++) {
+      if (availableSpots.length > 0) {
+        const spot = availableSpots.splice(Math.floor(Math.random() * availableSpots.length), 1)[0];
+        newPowerUps.push({ ...spot, type: 'freeze' });
+      }
+    }
+    
+    // Add 1 avada kedavra (rarest)
+    if (availableSpots.length > 0) {
+      const spot = availableSpots.splice(Math.floor(Math.random() * availableSpots.length), 1)[0];
+      newPowerUps.push({ ...spot, type: 'avada' });
+    }
+    
     setPowerUps(newPowerUps);
   };
 
@@ -245,14 +306,31 @@ const MiniGame: React.FC = () => {
       }
       
       // Check for power-up collection
-      if (powerUps.has(pos)) {
-        setPowerUps(prev => {
-          const newSet = new Set(prev);
-          newSet.delete(pos);
-          return newSet;
-        });
-        setIsPoweredUp(true);
-        setVulnerableDementors(new Set([0, 1, 2, 3]));
+      const powerUpIndex = powerUps?.findIndex(p => p.x === newX && p.y === newY);
+      if (powerUpIndex !== undefined && powerUpIndex >= 0 && powerUps) {
+        const powerUp = powerUps[powerUpIndex];
+        setPowerUps(prev => prev?.filter((_, i) => i !== powerUpIndex));
+        
+        switch (powerUp.type) {
+          case 'transform':
+            setPowerUpStates(prev => ({ ...prev, transform: true }));
+            setDementors(prev => prev.map(d => ({ ...d, state: 'chicken' })));
+            showPopup("TRANSFORMED! 🐔");
+            break;
+          case 'freeze':
+            setPowerUpStates(prev => ({ ...prev, freeze: true }));
+            setDementors(prev => prev.map(d => ({ ...d, state: 'frozen' })));
+            showPopup("GLACIUS! ❄️");
+            break;
+          case 'avada':
+            if (!powerUpStates.avadaUsed) {
+              setPowerUpStates(prev => ({ ...prev, avadaUsed: true }));
+              setDementors([]);
+              setPacmanScore(prev => prev + 200);
+              showPopup("AVADA KEDAVRA! ⚡💀");
+            }
+            break;
+        }
       }
       
       return { x: newX, y: newY };
@@ -276,6 +354,23 @@ const MiniGame: React.FC = () => {
     return () => window.removeEventListener('keydown', handleKeyPress);
   }, [pacmanGameActive]);
 
+  const getPowerUpEmoji = (type: string) => {
+    switch (type) {
+      case 'transform': return '🔮';
+      case 'freeze': return '❄️';
+      case 'avada': return '⚡';
+      default: return '⚡';
+    }
+  };
+
+  const getDementorEmoji = (state: string) => {
+    switch (state) {
+      case 'chicken': return '🐔';
+      case 'frozen': return '🧊';
+      default: return '🖤';
+    }
+  };
+
   return (
     <div className="min-h-screen pt-24 p-6">
       <div className="max-w-4xl mx-auto">
@@ -290,6 +385,15 @@ const MiniGame: React.FC = () => {
           </h1>
           <p className="text-xl opacity-80">Fun games made with love for Samragi! 💕</p>
         </div>
+
+        {/* Popup */}
+        {popup.show && (
+          <div className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-50 
+                          bg-gradient-to-r from-purple-600 to-pink-600 text-white px-8 py-4 rounded-lg 
+                          text-2xl font-bold shadow-2xl animate-pulse">
+            {popup.message}
+          </div>
+        )}
 
         {/* Game Selection */}
         <div className="flex justify-center mb-8 space-x-4">
@@ -391,11 +495,10 @@ const MiniGame: React.FC = () => {
                 <div className="flex items-center">
                   <span className="text-lg">🏐 Snitches: {snitches.size}</span>
                 </div>
-                {isPoweredUp && (
-                  <div className="flex items-center">
-                    <span className="text-lg animate-pulse">⚡ POWERED UP!</span>
-                  </div>
-                )}
+                <div className="flex items-center space-x-2">
+                  {powerUpStates.transform && <span className="text-sm animate-pulse">🔮 TRANSFORM</span>}
+                  {powerUpStates.freeze && <span className="text-sm animate-pulse">❄️ FREEZE</span>}
+                </div>
               </div>
               <button
                 onClick={startPacmanGame}
@@ -412,8 +515,8 @@ const MiniGame: React.FC = () => {
             <div className="text-center mb-6">
               <p className="text-lg">
                 {pacmanGameActive 
-                  ? 'Use arrow keys to move! Collect snitches and avoid Dementors! ⚡ for power!' 
-                  : 'Navigate the maze, collect Golden Snitches, and escape the Dementors!'
+                  ? 'Use arrow keys to move! Collect snitches and find magical power-ups!' 
+                  : 'Navigate the maze, collect Golden Snitches, and use spells against Dementors!'
                 }
               </p>
             </div>
@@ -444,11 +547,8 @@ const MiniGame: React.FC = () => {
                       {/* Dementors */}
                       {dementors.map((dementor, index) => 
                         dementor.x === x && dementor.y === y && (
-                          <span 
-                            key={index}
-                            className={isPoweredUp ? 'opacity-50' : ''}
-                          >
-                            {isPoweredUp ? '👻' : '🖤'}
+                          <span key={index}>
+                            {getDementorEmoji(dementor.state)}
                           </span>
                         )
                       )}
@@ -457,7 +557,11 @@ const MiniGame: React.FC = () => {
                       {snitches.has(`${x},${y}`) && '🏐'}
                       
                       {/* Power-ups */}
-                      {powerUps.has(`${x},${y}`) && '⚡'}
+                      {powerUps?.find(p => p.x === x && p.y === y) && (
+                        <span className="animate-pulse">
+                          {getPowerUpEmoji(powerUps.find(p => p.x === x && p.y === y)?.type || '')}
+                        </span>
+                      )}
                       
                       {/* Walls */}
                       {cell === 1 && '🪨'}
@@ -475,11 +579,13 @@ const MiniGame: React.FC = () => {
                   <p className="text-lg opacity-90 mb-4">
                     Navigate the maze and collect all Golden Snitches!
                   </p>
-                  <p className="text-sm opacity-75 mb-2">
-                    Use arrow keys to move
-                  </p>
+                  <div className="text-sm opacity-75 mb-4">
+                    <p className="mb-2">🔮 Transform Spell: Turn Dementors into Chickens</p>
+                    <p className="mb-2">❄️ Glacius: Freeze all Dementors</p>
+                    <p className="mb-2">⚡ Avada Kedavra: Eliminate all Dementors (RARE!)</p>
+                  </div>
                   <p className="text-sm opacity-75">
-                    Collect ⚡ to make Dementors vulnerable!
+                    Use arrow keys to move around the maze
                   </p>
                 </div>
               </div>
