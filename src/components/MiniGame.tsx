@@ -341,11 +341,12 @@ const MiniGame: React.FC = () => {
   useEffect(() => {
     const handleKeyPress = (e: KeyboardEvent) => {
       if (pacmanGameActive) {
-        switch (e.key) {
-          case 'ArrowUp': movePlayer('up'); break;
-          case 'ArrowDown': movePlayer('down'); break;
-          case 'ArrowLeft': movePlayer('left'); break;
-          case 'ArrowRight': movePlayer('right'); break;
+        e.preventDefault(); // Prevent page scrolling
+        switch (e.key.toLowerCase()) {
+          case 'w': movePlayer('up'); break;
+          case 's': movePlayer('down'); break;
+          case 'a': movePlayer('left'); break;
+          case 'd': movePlayer('right'); break;
         }
       }
     };
@@ -515,7 +516,7 @@ const MiniGame: React.FC = () => {
             <div className="text-center mb-6">
               <p className="text-lg">
                 {pacmanGameActive 
-                  ? 'Use arrow keys to move! Collect snitches and find magical power-ups!' 
+                  ? 'Use WASD keys to move! Collect snitches and find magical power-ups!' 
                   : 'Navigate the maze, collect Golden Snitches, and use spells against Dementors!'
                 }
               </p>
@@ -557,8 +558,8 @@ const MiniGame: React.FC = () => {
                       {snitches.has(`${x},${y}`) && '🏐'}
                       
                       {/* Power-ups */}
-                      {powerUps?.find(p => p.x === x && p.y === y) && (
-                        <span className="animate-pulse">
+                      {powerUps?.some(p => p.x === x && p.y === y) && (
+                        <span className="animate-pulse text-lg">
                           {getPowerUpEmoji(powerUps.find(p => p.x === x && p.y === y)?.type || '')}
                         </span>
                       )}
@@ -585,7 +586,7 @@ const MiniGame: React.FC = () => {
                     <p className="mb-2">⚡ Avada Kedavra: Eliminate all Dementors (RARE!)</p>
                   </div>
                   <p className="text-sm opacity-75">
-                    Use arrow keys to move around the maze
+                    Use WASD keys to move around the maze
                   </p>
                 </div>
               </div>
