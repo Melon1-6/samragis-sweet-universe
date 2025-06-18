@@ -15,9 +15,6 @@ const Navigation: React.FC<NavigationProps> = ({ currentPage, setCurrentPage }) 
     { id: 'love-letter', label: 'Love Letter', icon: Heart },
     { id: 'gallery', label: 'Gallery', icon: Image },
     { id: 'love-story', label: 'Our Story', icon: Map },
-    { id: 'voice-messages', label: 'Voice Notes', icon: Mic },
-    { id: 'couples-quiz', label: 'Quiz', icon: Users },
-    { id: 'countdown', label: 'Countdown', icon: Clock },
     { id: 'mini-game', label: 'Game', icon: Gamepad },
     { id: 'constellation', label: 'Stars', icon: Star }
   ];
