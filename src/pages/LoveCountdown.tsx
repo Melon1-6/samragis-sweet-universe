@@ -108,7 +108,7 @@ const LoveCountdown: React.FC = () => {
               <div 
                 key={countdown.id}
                 className={`glass-card p-8 transition-all duration-300 hover:scale-105 ${
-                  countdown.isSpecial ? 'ring-2' : ''
+                  countdown.isSpecial ? 'border-2' : ''
                 }`}
                 style={{
                   borderColor: countdown.isSpecial ? countdown.color : 'transparent'

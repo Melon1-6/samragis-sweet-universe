@@ -22,36 +22,36 @@ const LoveStoryTimeline: React.FC = () => {
   const timelineEvents: TimelineEvent[] = [
     {
       id: 1,
-      date: "The Beginning",
-      title: "First Hello",
-      description: "The moment our eyes met and the world suddenly made sense. Everything changed in that perfect instant.",
-      location: "In my heart",
-      icon: "💕",
+      date: "From The Very First Moment",
+      title: "You Are Pure Magic",
+      description: "Samragi, you are the most precious soul I've ever encountered. Your beauty radiates from within, lighting up every corner of my world. You are absolutely stunning, not just in looks but in every fiber of your being. You deserve to be cherished, adored, and loved beyond measure.",
+      location: "In my heart, always",
+      icon: "✨",
       emotion: 'love'
     },
     {
       id: 2,
-      date: "Every Day Since",
-      title: "Growing Closer",
-      description: "Each conversation, each laugh, each shared silence has woven our hearts together more tightly.",
-      icon: "🌸",
+      date: "Every Single Day",
+      title: "You Are My Universe",
+      description: "You are my world, my everything, my universe. Every breath I take is for you. You deserve the entire world at your feet, and I would move mountains just to see you smile. You are precious beyond words, a treasure that makes life worth living.",
+      icon: "🌟",
       emotion: 'joy'
     },
     {
       id: 3,
-      date: "Right Now",
-      title: "This Moment",
-      description: "Here, in this digital space I created for you, surrounded by all my love made visible.",
-      icon: "✨",
-      emotion: 'excitement'
+      date: "In Every Dream",
+      title: "You Are My Guardian Angel",
+      description: "I want to watch over you while you sleep, protect your dreams, and make sure you always feel safe and loved. You are so precious to me, like a delicate flower that I want to nurture and protect forever. Your peace is my priority, your happiness is my mission.",
+      icon: "👼",
+      emotion: 'peace'
     },
     {
       id: 4,
-      date: "Forever",
-      title: "Our Future",
-      description: "All the tomorrows we'll share, all the dreams we'll build, all the love that's yet to bloom.",
-      icon: "🌟",
-      emotion: 'peace'
+      date: "Until The End Of Time",
+      title: "Forever And Always",
+      description: "I want to love you till the end of time and beyond. You are the most precious gift life has given me. Every moment with you is a blessing, every second a treasure. You deserve endless love, infinite care, and all the beauty this world has to offer.",
+      icon: "♾️",
+      emotion: 'excitement'
     }
   ];
 
@@ -85,9 +85,9 @@ const LoveStoryTimeline: React.FC = () => {
               backgroundImage: `linear-gradient(45deg, ${themeConfig.primary}, ${themeConfig.secondary})`
             }}
           >
-            Our Love Story
+            How Precious You Are
           </h1>
-          <p className="text-xl opacity-80">A timeline of our beautiful journey together 💕</p>
+          <p className="text-xl opacity-80">Every word for my beautiful Samragi ✨💕</p>
         </div>
 
         <div className="relative">
@@ -153,6 +153,26 @@ const LoveStoryTimeline: React.FC = () => {
               </div>
             </div>
           ))}
+        </div>
+
+        {/* Special Message */}
+        <div className="glass-card p-8 mt-12 text-center">
+          <h2 className="text-3xl font-bold mb-4">You Are Everything To Me</h2>
+          <p className="text-lg leading-relaxed opacity-90">
+            Samragi, you are the most precious person in my entire universe. 
+            Every word here comes from the deepest part of my heart. 
+            You deserve to be loved, cherished, and treated like the absolute treasure you are. 
+            Never forget how special, beautiful, and precious you are to me. 💕✨
+          </p>
+          
+          <div className="mt-8 flex justify-center">
+            <div className="animate-pulse">
+              <Heart 
+                size={32} 
+                className="text-red-500 fill-current"
+              />
+            </div>
+          </div>
         </div>
 
         {/* Floating Hearts */}
